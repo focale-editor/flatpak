@@ -1,0 +1,9 @@
+/build/
+/site/
+/secrets/
+__pycache__/
+*.pyc
+/.idea/.gitignore
+/.idea/FocaleFlatpak.iml
+/.idea/modules.xml
+/.idea/vcs.xml

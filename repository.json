@@ -1,0 +1,8 @@
+{
+  "repository": "focale-editor/flatpak",
+  "baseUrl": "https://flatpak.focale-editor.app",
+  "applicationId": "app.focaleeditor.Focale",
+  "branch": "stable",
+  "architecture": "x86_64",
+  "gpgFingerprint": "1BE6787423A2C1DB817EBFE73EF0EC93275A40C3"
+}

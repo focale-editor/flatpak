@@ -1,0 +1,64 @@
+name: Deploy signed Flatpak repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Immutable public Flatpak release tag
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: flatpak-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-26.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install Flatpak repository verification tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak ostree gnupg
+      - name: Download and verify the immutable snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          PUBLIC_REPOSITORY: ${{ github.repository }}
+        run: |
+          newest="$(gh release list --repo "$PUBLIC_REPOSITORY" --exclude-drafts --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')"
+          if [[ "$RELEASE_TAG" != "$newest" ]]; then echo 'Refusing to deploy an older stable release.' >&2; exit 1; fi
+          mkdir -p build/download
+          gh release download "$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" --pattern 'snapshot.json' --dir build/download
+          python3 - <<'PY'
+          import json, pathlib, subprocess
+          metadata = pathlib.Path('build/download/snapshot.json')
+          info = json.loads(metadata.read_text())
+          name = info['archive']
+          if pathlib.Path(name).name != name or not name.startswith('Focale-flatpak-') or not name.endswith('.tar.gz'):
+              raise ValueError('Unsafe release asset name')
+          import os
+          if info['tag'] != os.environ['RELEASE_TAG']:
+              raise ValueError('Snapshot tag mismatch')
+          subprocess.run(['gh', 'release', 'download', os.environ['RELEASE_TAG'], '--repo', os.environ['PUBLIC_REPOSITORY'],
+                          '--pattern', name, '--dir', 'build/download'], check=True)
+          subprocess.run(['python3', 'scripts/repository.py', 'stage', '--snapshot', str(metadata.parent / name),
+                          '--metadata', str(metadata), '--output', 'site'], check=True)
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
