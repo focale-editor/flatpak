@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://focale-editor.app">
-    <img src="assets/branding/app_icon_512.png" alt="Focale app logo" width="112" height="112">
+    <img src=".github/assets/focale.png" alt="Focale app logo" width="112" height="112">
   </a>
 </p>
 
