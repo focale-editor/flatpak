@@ -1,73 +1,137 @@
-# Focale Flatpak
+<p align="center">
+  <a href="https://focale-editor.app">
+    <img src="assets/branding/app_icon_512.png" alt="Focale app logo" width="112" height="112">
+  </a>
+</p>
 
-Dépôt public de distribution Flatpak de [Focale](https://focale-editor.app),
-préparé pour **https://flatpak.focale-editor.app**. Il contient la configuration,
-la clé publique et le workflow de publication, sans le code source de l’éditeur.
-Les objets OSTree et les deltas sont stockés dans des pièces jointes de releases
-GitHub, puis déployés sur Pages ; ils ne sont pas committés dans Git.
+<h1 align="center">Focale Flatpak</h1>
 
-Après la première publication :
+The official Flatpak distribution repository for [Focale](https://focale-editor.app),
+a raster image editor. Install Focale on Linux and receive updates through Flatpak
+or a compatible software center.
+
+[Website](https://focale-editor.app) ·
+[Releases](https://github.com/focale-editor/flatpak/releases) ·
+[Community & support](https://github.com/focale-editor/community)
+
+## Install
+
+You need an **x86_64 Linux system** with Flatpak installed. See the
+[Flatpak setup guide](https://flatpak.org/setup/) for your distribution.
+
+Install Focale for your current user:
 
 ```bash
 flatpak install --user https://flatpak.focale-editor.app/Focale.flatpakref
+```
+
+Follow the prompts to add the Focale remote and install the required runtime from
+Flathub. Then open Focale from your application launcher, or run:
+
+```bash
+flatpak run app.focaleeditor.Focale
+```
+
+The package includes desktop integration for the application launcher, icons,
+supported image formats, and `.focale` documents.
+
+## Update or uninstall
+
+Updates are delivered through Flatpak. Use your compatible software center or run:
+
+```bash
 flatpak update --user app.focaleeditor.Focale
 ```
 
-Le paquet x86_64 utilise Freedesktop 25.08 fourni par Flathub. Ses intégrations
-au bureau comprennent le lanceur, les icônes, les formats d’image et le type
-`.focale`. Les mises à jour passent par Flatpak et le gestionnaire de logiciels.
+To uninstall:
 
-## Première mise en ligne
+```bash
+flatpak uninstall --user app.focaleeditor.Focale
+```
 
-1. Créer `focale-editor/flatpak` **public**, avec ce contenu sur la branche `main`.
-2. Choisir **Settings → Pages → Source: GitHub Actions**. Définir le domaine
-   `flatpak.focale-editor.app`, avec un CNAME DNS vers `focale-editor.github.io`.
-   Vérifier le domaine dans l’organisation et activer HTTPS une fois disponible.
-3. Fournir à la compilation privée un token limité à ce dépôt, avec accès
-   **Contents: Read and write** et **Actions: Read and write**. La publication
-   téléverse les snapshots et déclenche `pages.yml` avec un tag immuable.
-4. Fournir au workflow privé la sauvegarde de la clé GPG correspondant à
-   `focale-flatpak.asc`. La clé privée n’a sa place ni dans ce dépôt, ni dans les
-   artifacts publics, ni dans Pages.
-5. Publier la première release depuis la compilation privée. Le déploiement
-   vérifie le SHA-256, la signature du résumé et la signature du commit OSTree.
+These commands use the per-user installation created above. If you installed
+Focale system-wide, use `--system` in place of `--user`.
 
-Les `.flatpakrepo` et `.flatpakref` sont générés lors du déploiement avec la clé
-publique intégrée. Ne pas remplacer la clé entre deux versions : les clients
-installés lui font confiance. Préparer une rotation explicite si elle devient
-nécessaire. La clé ne prend pas en charge une collection P2P ; ce dépôt utilise
-les mises à jour distantes habituelles.
+## Package details
 
-## Snapshots et mises à jour
+| Property | Value |
+| --- | --- |
+| Application ID | `app.focaleeditor.Focale` |
+| Architecture | `x86_64` |
+| Repository branch | `stable` |
+| Runtime | Freedesktop 25.08, provided by Flathub |
+| Repository URL | `https://flatpak.focale-editor.app/repo/` |
 
-Le pipeline privé importe la version SDK dans le snapshot signé précédent,
-signe le commit et le résumé, conserve deux niveaux d’historique et produit les
-deltas. Chaque release contient `snapshot.json` et `Focale-flatpak-<version>.tar.gz`.
-Une publication existante est immuable. Les workflows refusent de remettre une
-ancienne version à la tête du canal stable.
+The `stable` branch identifies the Flatpak update channel; check the release notes
+for the application's development status.
 
-GitHub Pages limite la taille des sites. Le pipeline refuse les snapshots dont
-les fichiers dépassent 950 Mio, ce qui réserve une marge aux descripteurs. Si
-l’application ou son historique dépasse ce budget, changer l’hébergement du
-dépôt avant publication ; ne pas supprimer les signatures pour le réduire.
+## About this repository
 
-Pour vérifier les outils localement :
+This repository contains the public distribution configuration, signing key, and
+publication tools.
+
+| File | Purpose |
+| --- | --- |
+| [`repository.json`](repository.json) | Repository URL, application ID, branch, architecture, and signing-key fingerprint. |
+| [`focale-flatpak.asc`](focale-flatpak.asc) | Public GPG key used to verify the repository. |
+| [`scripts/repository.py`](scripts/repository.py) | Assemble signed snapshots, verify them, and prepare the Pages site. |
+| [`scripts/repository_test.py`](scripts/repository_test.py) | Integration tests for signatures, snapshots, and client updates. |
+| [`.github/workflows/pages.yml`](.github/workflows/pages.yml) | Deploy a verified release snapshot to GitHub Pages. |
+
+OSTree repository data and delta updates are stored as GitHub Release assets.
+Each release contains `snapshot.json` and `Focale-flatpak-<version>.tar.gz`;
+these generated files are not committed to Git.
+
+## Publication and maintenance
+
+The release pipeline imports each new build into the previous signed repository,
+retains two levels of commit history, and generates delta updates. Published
+snapshots are treated as immutable.
+
+The Pages workflow takes a release tag, verifies the archive's SHA-256 checksum,
+the GPG signatures on the repository summary and application commit, and the
+expected application ref and commit. It then generates `Focale.flatpakref` and
+`Focale.flatpakrepo` with the public key embedded and deploys the site. It refuses
+to deploy a release other than the latest non-draft, non-prerelease release.
+
+Keep the signing identity stable across releases: installed clients trust the
+existing public key. Any key rotation needs an explicit migration plan. Private
+signing keys must stay outside this repository, public release assets, and Pages.
+
+The tooling enforces a **950 MiB limit on uncompressed repository files**, leaving
+room for generated descriptors within the Pages site budget. If the application
+and retained history outgrow this limit, move the repository to suitable hosting
+before publishing.
+
+### Local validation
+
+On Linux, install **Python 3.12 or newer**, **Flatpak**, **OSTree**, and **GnuPG**.
+Run the existing integration tests from the repository root:
 
 ```bash
 python3 -m unittest discover -s scripts -p '*_test.py'
-python3 scripts/repository.py stage --snapshot build/Focale-flatpak-1.0.0+1.tar.gz \
-  --metadata build/snapshot.json --output site
 ```
 
-Les tests utilisent des dépôts OSTree et clés GPG temporaires. Ils vérifient
-l’historique, les deltas, l’installation et la mise à jour de clients Flatpak
-et OSTree épinglant la clé publique.
+The tests create temporary repositories, signing keys, and a separate Flatpak
+installation. They exercise signed test packages, commit history, delta updates,
+client installation and updates, and rejection of invalid signatures or archives.
 
-## Retours et assistance
+To verify and stage an existing release snapshot locally:
 
-Centraliser les problèmes d’installation, de mise à jour et d’utilisation dans
-[Focale Community](https://github.com/focale-editor/community). Préciser la version
-de Focale, la distribution Linux, la version de Flatpak et le message d’erreur.
+```bash
+python3 scripts/repository.py stage \
+  --snapshot build/Focale-flatpak-1.0.0+1.tar.gz \
+  --metadata build/snapshot.json \
+  --output site
+```
 
-Références : [héberger un dépôt Flatpak](https://docs.flatpak.org/en/latest/hosting-a-repository.html),
-[GitHub Pages et les domaines personnalisés](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/about-custom-domains-and-github-pages).
+Replace the example archive with the actual release asset and use its matching
+`snapshot.json`. The output directory must be empty or absent. This command
+verifies the snapshot and generates the site locally; it does not publish it.
+
+## Support and feedback
+
+Report installation, update, and application issues in
+[Focale Community](https://github.com/focale-editor/community). Include your Focale
+version, Linux distribution, Flatpak version (`flatpak --version`), the command or
+action that failed, and the full error message.
