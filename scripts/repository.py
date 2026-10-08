@@ -213,13 +213,13 @@ def descriptors(destination, settings):
     (destination / "CNAME").write_text("flatpak.focale-editor.app\n")
     (destination / ".nojekyll").touch()
     (destination / "index.html").write_text("""<!doctype html>
-<html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-<title>Focale — dépôt Flatpak</title>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>Focale — Flatpak repository</title>
 <style>body{font:1rem system-ui;max-width:46rem;margin:4rem auto;padding:0 1.5rem;line-height:1.6;color:#181f33}a{color:#24528c}pre{padding:1rem;background:#f1f2f4;overflow:auto;border-radius:.5rem}</style>
-<h1>Focale pour Linux</h1><p>Installez Focale avec Flatpak. Votre gestionnaire de logiciels se charge des mises à jour.</p>
-<p><a href="Focale.flatpakref">Installer Focale</a> · <a href="Focale.flatpakrepo">Ajouter le dépôt</a> · <a href="https://focale-editor.app">Découvrir Focale</a></p>
+<h1>Focale for Linux</h1><p>Install Focale with Flatpak. Your software center handles updates.</p>
+<p><a href="Focale.flatpakref">Install Focale</a> · <a href="Focale.flatpakrepo">Add the repository</a> · <a href="https://focale-editor.app">Discover Focale</a></p>
 <pre>flatpak install --user https://flatpak.focale-editor.app/Focale.flatpakref</pre>
-<p>Le paquet est destiné aux systèmes x86_64 et utilise le runtime Freedesktop disponible sur Flathub.</p></html>
+<p>The package is designed for x86_64 systems and uses the Freedesktop runtime available on Flathub.</p></html>
 """)
 
 
