@@ -79,8 +79,11 @@ publication tools.
 | [`.github/workflows/pages.yml`](.github/workflows/pages.yml) | Deploy a verified release snapshot to GitHub Pages. |
 
 OSTree repository data and delta updates are stored as GitHub Release assets.
-Each release contains `snapshot.json` and `Focale-flatpak-<version>.tar.gz`;
-these generated files are not committed to Git.
+Release titles use `Focale v<version>`. New release attachments are
+`focale-<version>-flatpak.json` and `focale-<version>-flatpak.tar.gz`, without the
+build number. The metadata retains the full version and build identity.
+Locally, `assemble` still writes `snapshot.json`, which publication uploads
+under the versioned name; these generated files are not committed to Git.
 
 ## Publication and maintenance
 
@@ -120,7 +123,7 @@ To verify and stage an existing release snapshot locally:
 
 ```bash
 python3 scripts/repository.py stage \
-  --snapshot build/Focale-flatpak-1.0.0+1.tar.gz \
+  --snapshot build/focale-1.0.0-flatpak.tar.gz \
   --metadata build/snapshot.json \
   --output site
 ```

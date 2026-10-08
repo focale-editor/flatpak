@@ -12,6 +12,46 @@ from unittest.mock import patch
 import repository as repo
 
 
+class ReleaseAssetTests(unittest.TestCase):
+    """Keep new and previously published snapshots deployable through Pages."""
+
+    def test_current_and_legacy_assets_with_both_tag_spellings(self):
+        for tag in ('1.2.3', 'v1.2.3'):
+            for metadata_name, archive_name in (
+                ('focale-1.2.3-flatpak.json', 'focale-1.2.3-flatpak.tar.gz'),
+                ('snapshot.json', 'Focale-flatpak-1.2.3+4.tar.gz'),
+            ):
+                with self.subTest(tag=tag, name=metadata_name), tempfile.TemporaryDirectory() as temporary:
+                    directory = Path(temporary)
+                    metadata = directory / metadata_name
+                    repo.write_json(metadata, {'version': '1.2.3+4', 'tag': tag, 'archive': archive_name})
+                    self.assertEqual(repo.release_snapshot(directory, tag), (metadata, archive_name))
+
+    def test_invalid_version_and_archive_identity_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            metadata = directory / 'focale-1.2.3-flatpak.json'
+            identity = {'version': '1.2.3+4', 'tag': '1.2.3', 'archive': 'focale-1.2.3-flatpak.tar.gz'}
+            for changes in ({'version': '1.2.4+4'}, {'tag': '1.2.4'},
+                            {'archive': '../focale-1.2.3-flatpak.tar.gz'},
+                            {'archive': 'focale-1.2.4-flatpak.tar.gz'},
+                            {'archive': 'Focale-flatpak-1.2.3+5.tar.gz'}):
+                with self.subTest(changes=changes):
+                    repo.write_json(metadata, {**identity, **changes})
+                    with self.assertRaises(ValueError):
+                        repo.release_snapshot(directory, '1.2.3')
+
+    def test_missing_or_competing_metadata_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            with self.assertRaisesRegex(ValueError, 'Missing'):
+                repo.release_snapshot(directory, '1.2.3')
+            for name in ('snapshot.json', 'focale-1.2.3-flatpak.json'):
+                (directory / name).write_text('{}')
+            with self.assertRaisesRegex(ValueError, 'ambiguous'):
+                repo.release_snapshot(directory, '1.2.3')
+
+
 class RepositoryTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -70,6 +110,7 @@ class RepositoryTests(unittest.TestCase):
                 "1.0.0",
                 self.home,
             )
+            self.assertEqual(first.name, 'focale-1.0.0-flatpak.tar.gz')
             site = root / "site-one"
             repo.stage(first, first.parent / "snapshot.json", site)
             descriptors = (site / "Focale.flatpakref").read_text()
@@ -87,6 +128,7 @@ class RepositoryTests(unittest.TestCase):
                 self.home,
                 site / "repo",
             )
+            self.assertEqual(second.name, 'focale-1.1.0-flatpak.tar.gz')
             updated = root / "site-two"
             repo.stage(second, second.parent / "snapshot.json", updated)
             new = json.loads((second.parent / "snapshot.json").read_text())["commit"]

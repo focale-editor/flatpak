@@ -290,7 +290,7 @@ def assemble(source, output, version, tag, gpg_home, previous=None):
         capture_output=True,
         text=True,
     ).stdout.strip()
-    archive = output / f"Focale-flatpak-{version}.tar.gz"
+    archive = output / f"focale-{version.split('+')[0]}-flatpak.tar.gz"
     with tarfile.open(archive, "w:gz") as stream:
         stream.add(repository, arcname="repo")
     write_json(
@@ -306,6 +306,24 @@ def assemble(source, output, version, tag, gpg_home, previous=None):
         },
     )
     return archive
+
+
+def release_snapshot(directory, tag):
+    """Resolve current or legacy release assets before downloading a snapshot."""
+    if not re.fullmatch(r"v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)", tag):
+        raise ValueError("Invalid Flatpak release tag.")
+    version = tag.removeprefix("v")
+    candidates = [directory / f"focale-{version}-flatpak.json", directory / "snapshot.json"]
+    matches = [path for path in candidates if path.is_file()]
+    if len(matches) != 1:
+        raise ValueError("Missing or ambiguous Flatpak snapshot metadata.")
+    metadata = matches[0]
+    info = json.loads(metadata.read_text())
+    if not VERSION.fullmatch(info["version"]) or info["tag"] != tag or info["version"].split("+")[0] != version:
+        raise ValueError("Snapshot tag mismatch.")
+    if info["archive"] not in (f"focale-{version}-flatpak.tar.gz", f"Focale-flatpak-{info['version']}.tar.gz"):
+        raise ValueError("Unsafe release asset name.")
+    return metadata, info["archive"]
 
 
 def stage(snapshot, metadata, destination):

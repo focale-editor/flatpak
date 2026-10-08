@@ -40,17 +40,11 @@ jobs:
           newest="$(gh release list --repo "$PUBLIC_REPOSITORY" --exclude-drafts --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')"
           if [[ "$RELEASE_TAG" != "$newest" ]]; then echo 'Refusing to deploy an older stable release.' >&2; exit 1; fi
           mkdir -p build/download
-          gh release download "$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" --pattern 'snapshot.json' --dir build/download
+          gh release download "$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" --pattern '*.json' --dir build/download
           python3 - <<'PY'
-          import json, pathlib, subprocess
-          metadata = pathlib.Path('build/download/snapshot.json')
-          info = json.loads(metadata.read_text())
-          name = info['archive']
-          if pathlib.Path(name).name != name or not name.startswith('Focale-flatpak-') or not name.endswith('.tar.gz'):
-              raise ValueError('Unsafe release asset name')
-          import os
-          if info['tag'] != os.environ['RELEASE_TAG']:
-              raise ValueError('Snapshot tag mismatch')
+          import os, pathlib, subprocess
+          from scripts.repository import release_snapshot
+          metadata, name = release_snapshot(pathlib.Path('build/download'), os.environ['RELEASE_TAG'])
           subprocess.run(['gh', 'release', 'download', os.environ['RELEASE_TAG'], '--repo', os.environ['PUBLIC_REPOSITORY'],
                           '--pattern', name, '--dir', 'build/download'], check=True)
           subprocess.run(['python3', 'scripts/repository.py', 'stage', '--snapshot', str(metadata.parent / name),
